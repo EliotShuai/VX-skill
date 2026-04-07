@@ -1,5 +1,7 @@
 # wechat-to-markdown-skill
 
+[English](./README.md) | [简体中文](./README.zh-CN.md)
+
 A small skill wrapper for converting article URLs, especially WeChat official account links, into Markdown and saving them into Obsidian-friendly notes.
 
 ## Attribution
@@ -73,4 +75,3 @@ wechat-to-markdown-skill/
 - Depends on an external parser service
 - Some WeChat articles may fail due to anti-bot behavior or network restrictions
 - This repository does not publish to WeChat; it only ingests article pages into Markdown
-

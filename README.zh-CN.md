@@ -1,5 +1,7 @@
 # wechat-to-markdown-skill
 
+[English](./README.md) | [简体中文](./README.zh-CN.md)
+
 一个面向 Obsidian / 本地笔记场景的 Skill 包装层，用于将网页文章链接，尤其是微信公众号文章链接，转换为 Markdown，并保存为适合 Obsidian 使用的笔记文件。
 
 ## 致谢与底层依赖
