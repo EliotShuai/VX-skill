@@ -1,77 +1,72 @@
-# wechat-to-markdown-skill
+# web-to-obsidian
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-A small skill wrapper for converting article URLs, especially WeChat official account links, into Markdown and saving them into Obsidian-friendly notes.
+Ingest public web articles, especially WeChat official account articles, into Obsidian-friendly Markdown notes.
 
-## Attribution
+## Overview
 
-This skill uses [`liangtengyu/to_markdown`](https://github.com/liangtengyu/to_markdown) as the underlying parser for converting supported article pages into Markdown.
+This repository contains a `web-to-obsidian` skill that combines:
 
-- Upstream parser repository: [liangtengyu/to_markdown](https://github.com/liangtengyu/to_markdown)
-- Upstream repository license: Apache-2.0
+- web retrieval strategy inspired by [`eze-is/web-access`](https://github.com/eze-is/web-access)
+- article extraction logic
+- Markdown normalization
+- Obsidian note writing
 
-This repository focuses on workflow integration for Codex skills and Obsidian note ingestion. It does not reimplement the parser itself.
+The goal is not just to read a page, but to finish the whole workflow:
 
-## What It Does
+`URL -> article body -> Markdown -> frontmatter -> local Obsidian note`
 
-- Calls a configured `to_markdown` service endpoint
-- Extracts Markdown from parser output
-- Optionally saves the result as a local Obsidian note
-- Adds frontmatter and a stable filename
+## Underlying Retrieval Layer
 
-## Expected Parser Endpoint
+This repository does **not** use `to_markdown`.
 
-The wrapper expects a parser compatible with the `to_markdown` frontend contract:
+Its underlying web acquisition model is based on [`eze-is/web-access`](https://github.com/eze-is/web-access):
 
-- `POST /resolve/mark`
-- JSON body:
+- choose the cheapest path that can succeed
+- escalate to browser access only when needed
+- treat anti-bot and dynamic rendering as routing signals, not as reasons to stop
 
-```json
-{
-  "blogUrl": "https://example.com/article"
-}
-```
+## Supported Workflow
 
-The response may be JSON or plain text. If JSON is returned, the wrapper prefers the `markdown` field.
+Especially for WeChat official account articles:
 
-## Quick Start
+1. try direct fetch with a mobile user agent
+2. extract:
+   - title
+   - author
+   - body
+3. normalize the body into Markdown
+4. write the result into an Obsidian directory
 
-### 1. Run a compatible parser service
+If direct fetch fails:
+- fall back to the browser-oriented strategy described by `web-access`
 
-For example, run a local instance of `to_markdown` so that it is reachable at:
-
-```text
-http://127.0.0.1:9999
-```
-
-### 2. Fetch Markdown
-
-```powershell
-$env:TO_MARKDOWN_BASE_URL="http://127.0.0.1:9999"
-python .\scripts\fetch_to_markdown.py "https://mp.weixin.qq.com/s/example"
-```
-
-### 3. Save as an Obsidian note
-
-```powershell
-python .\scripts\fetch_to_markdown.py "https://mp.weixin.qq.com/s/example" --json-out result.json
-python .\scripts\save_obsidian_note.py --input-json result.json --output-dir "E:\Notes\Inbox"
-```
-
-## Repository Layout
+## Repository Contents
 
 ```text
-wechat-to-markdown-skill/
+web-to-obsidian/
 ├── SKILL.md
 ├── README.md
+├── README.zh-CN.md
+├── requirements.txt
 └── scripts/
-    ├── fetch_to_markdown.py
     └── save_obsidian_note.py
 ```
 
-## Limitations
+## What This Skill Adds
 
-- Depends on an external parser service
-- Some WeChat articles may fail due to anti-bot behavior or network restrictions
-- This repository does not publish to WeChat; it only ingests article pages into Markdown
+Compared with a general-purpose web skill, this repository adds:
+
+- article-focused extraction rules
+- WeChat-specific selectors
+- Markdown cleanup rules
+- Obsidian frontmatter conventions
+- local note save behavior
+
+## Notes
+
+- `web-access` is the acquisition philosophy and tool pattern
+- this repository is the ingestion-and-save layer
+- for private pages or sites requiring login, browser/CDP access may still be required
+

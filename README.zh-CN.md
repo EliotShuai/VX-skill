@@ -1,166 +1,68 @@
-# wechat-to-markdown-skill
+# web-to-obsidian
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-一个面向 Obsidian / 本地笔记场景的 Skill 包装层，用于将网页文章链接，尤其是微信公众号文章链接，转换为 Markdown，并保存为适合 Obsidian 使用的笔记文件。
+将公开网页文章，尤其是微信公众号文章，导入为适合 Obsidian 使用的 Markdown 笔记。
 
-## 致谢与底层依赖
+## 仓库定位
 
-本 Skill 使用 [`liangtengyu/to_markdown`](https://github.com/liangtengyu/to_markdown) 作为底层解析器，将支持的网站文章页面转换为 Markdown。
+这个仓库提供的是一个 `web-to-obsidian` skill，用于把下面这条链路做完整：
 
-- 上游解析器仓库：[liangtengyu/to_markdown](https://github.com/liangtengyu/to_markdown)
-- 上游仓库许可证：Apache-2.0
+`URL -> 网页正文 -> Markdown -> frontmatter -> 本地 Obsidian 笔记`
 
-本仓库的职责是：
-- 封装调用流程
-- 规范输出格式
-- 对接 Obsidian / 本地知识库
+它不是单纯的网页读取工具，也不是单纯的 Markdown 转换器，而是一个完整的“抓取并落库”工作流。
 
-本仓库**不重新实现网页解析器本身**。
+## 底层依赖
 
-## 这个 Skill 能做什么
+本仓库**不再使用** `to_markdown`。
 
-- 调用配置好的 `to_markdown` 服务
-- 将公众号文章链接转换为 Markdown
-- 从解析结果中提取正文
-- 可选地保存为本地 Obsidian 笔记
-- 自动补充基础 frontmatter
+底层获取策略改为参考并依赖 [`eze-is/web-access`](https://github.com/eze-is/web-access)：
 
-## 预期的解析服务接口
+- 先尝试最低成本的可行路径
+- 只有在失败或内容不完整时，才升级到浏览器/CDP
+- 把反爬、动态渲染、环境异常视为“切换路径的信号”
 
-这个包装层默认假设底层解析服务兼容以下接口：
+## 核心工作流
 
-- `POST /resolve/mark`
-- 请求体：
+尤其针对微信公众号文章：
 
-```json
-{
-  "blogUrl": "https://mp.weixin.qq.com/s/example"
-}
-```
+1. 优先用移动端 User-Agent 直接请求页面
+2. 从 HTML 中提取：
+   - 标题
+   - 作者
+   - 正文
+3. 将正文规范化为 Markdown
+4. 加上 Obsidian 所需的 frontmatter
+5. 写入用户指定目录
 
-返回结果可以是：
-- JSON
-- 纯文本
+如果直连请求失败：
+- 再切换到 `web-access` 的浏览器/CDP 路线
 
-如果返回 JSON，本仓库优先提取这些字段中的正文：
-- `markdown`
-- `md`
-- `content`
-- `data`
-
-## 快速开始
-
-### 1. 启动一个兼容的 `to_markdown` 服务
-
-例如让它在本地监听：
+## 仓库内容
 
 ```text
-http://127.0.0.1:9999
-```
-
-### 2. 获取 Markdown
-
-```powershell
-$env:TO_MARKDOWN_BASE_URL="http://127.0.0.1:9999"
-python .\scripts\fetch_to_markdown.py "https://mp.weixin.qq.com/s/example"
-```
-
-### 3. 保存为 Obsidian 笔记
-
-```powershell
-python .\scripts\fetch_to_markdown.py "https://mp.weixin.qq.com/s/example" --json-out result.json
-python .\scripts\save_obsidian_note.py --input-json result.json --output-dir "E:\Notes\Inbox"
-```
-
-## 配置说明
-
-### 环境变量
-
-`fetch_to_markdown.py` 支持以下环境变量：
-
-- `TO_MARKDOWN_BASE_URL`
-  - 默认值：`http://127.0.0.1:9999`
-- `TO_MARKDOWN_TIMEOUT`
-  - 默认值：`30`
-
-### Python 依赖
-
-安装依赖：
-
-```powershell
-pip install -r .\requirements.txt
-```
-
-## 目录结构
-
-```text
-wechat-to-markdown-skill/
+web-to-obsidian/
 ├── SKILL.md
 ├── README.md
 ├── README.zh-CN.md
 ├── requirements.txt
 └── scripts/
-    ├── fetch_to_markdown.py
     └── save_obsidian_note.py
 ```
 
-## 脚本说明
+## 相比通用网页 skill 增加了什么
 
-### `scripts/fetch_to_markdown.py`
+这个仓库在通用联网能力之上，额外补了：
 
-作用：
-- 调用底层解析服务
-- 抽取标准化 Markdown
-- 可输出纯 Markdown
-- 也可输出标准化 JSON 结果
+- 面向文章的抽取规则
+- 微信公众号专用选择器
+- Markdown 清洗规则
+- Obsidian frontmatter 规范
+- 本地笔记落库行为
 
-输出的标准化 JSON 里通常包含：
-- `title`
-- `source_url`
-- `source_type`
-- `parser_endpoint`
-- `markdown`
-- `raw`
+## 说明
 
-### `scripts/save_obsidian_note.py`
+- `web-access` 负责“怎么读到网页”
+- 本仓库负责“怎么把文章变成 Obsidian 笔记”
+- 对于私有页面、强登录态页面，仍可能需要浏览器/CDP 路径
 
-作用：
-- 读取标准化 JSON
-- 生成带 frontmatter 的 Markdown 笔记
-- 按标题生成安全文件名
-- 写入指定目录
-
-默认 frontmatter 包含：
-- `title`
-- `source_url`
-- `source_type`
-- `created_at`
-- `tags`
-
-## 适用场景
-
-适合：
-- 微信公众号文章归档
-- 网页转 Markdown
-- 导入 Obsidian
-- 给 AI 后续做摘要、标签、知识整理提供干净输入
-
-不适合：
-- 发布文章到微信公众号
-- 读取必须登录后才能访问的私有内容
-- 依赖浏览器会话、验证码或强交互页面的抓取
-
-## 当前限制
-
-- 依赖外部解析服务运行正常
-- 部分公众号页面可能受反爬、网络环境或地区访问限制影响
-- 该仓库只负责“调用与落库”，不保证所有网页都能被稳定解析
-
-## 后续可扩展方向
-
-- 自动提取作者、发布时间、封面图
-- 自动写入 Obsidian 指定目录结构
-- 自动生成摘要、标签和引用卡片
-- 支持批量导入链接列表
-- 增加更贴近 Codex Skill 的安装说明
